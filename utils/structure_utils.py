@@ -122,12 +122,15 @@ def load_pdb(pdb_file):
         chain_id = structure.chain_id[0]
         structure = structure[structure.chain_id == chain_id]
         
+        from biotite.sequence import ProteinSequence
         from biotite.structure import residues
+
         residue_ids = residues(structure)[0]
-        sequence = ''.join([
+        three_letter = [
             structure[structure.res_id == res_id].res_name[0]
             for res_id in residue_ids
-        ])
+        ]
+        sequence = ''.join(ProteinSequence.convert_letter_3to1(res) for res in three_letter)
         
         ca_atoms = structure[structure.atom_name == 'CA']
         coords = ca_atoms.coord
