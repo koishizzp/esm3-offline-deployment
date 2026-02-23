@@ -1,0 +1,19 @@
+# GFP论文复现项目 - 额外依赖
+
+# 基础科学计算
+numpy>=1.20.0
+scipy>=1.7.0
+
+# 生物信息学
+biopython>=1.79
+
+# 结构处理（可选，推荐安装）
+biotite>=0.36.0
+
+# HTTP请求
+requests>=2.26.0
+
+# 注意：
+# ESM3相关依赖已经在部署时安装
+# 如果需要额外的包，请使用：
+#   pip install <package> --break-system-packages
