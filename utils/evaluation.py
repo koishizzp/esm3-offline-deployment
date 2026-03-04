@@ -56,7 +56,12 @@ def evaluate_candidate(
         'sequence': generated_protein.sequence,
         'length': len(generated_protein.sequence),
         'pass': False,
-        'metrics': {}
+        'metrics': {
+            'sequence_identity': None,
+            'ptm': None,
+            'plddt': None,
+            'chromophore_rmsd': None,
+        }
     }
     
     # 1. 序列相同性
@@ -221,14 +226,14 @@ def generate_summary_stats(candidates_results):
     
     # 计算统计量
     for metric, values in metrics_values.items():
-        summary[f'{metric}_mean'] = np.mean(values)
-        summary[f'{metric}_std'] = np.std(values)
-        summary[f'{metric}_min'] = np.min(values)
-        summary[f'{metric}_max'] = np.max(values)
+        summary[f'{metric}_mean'] = float(np.mean(values))
+        summary[f'{metric}_std'] = float(np.std(values))
+        summary[f'{metric}_min'] = float(np.min(values))
+        summary[f'{metric}_max'] = float(np.max(values))
     
     # 序列多样性
     sequences = [r['sequence'] for r in candidates_results]
-    summary['sequence_diversity'] = 1.0 - calculate_diversity(sequences)
+    summary['sequence_diversity'] = float(1.0 - calculate_diversity(sequences))
     
     return summary
 

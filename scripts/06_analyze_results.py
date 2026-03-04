@@ -11,7 +11,9 @@ import csv
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
-from utils.structure_utils import save_to_fasta
+
+
+EXPECTED_METRICS = ['ptm', 'plddt', 'chromophore_rmsd', 'sequence_identity']
 
 
 def load_evaluation_results(csv_file):
@@ -23,7 +25,7 @@ def load_evaluation_results(csv_file):
         for row in reader:
             # 转换数值
             for key in row:
-                if key in ['ptm', 'plddt', 'chromophore_rmsd', 'sequence_identity']:
+                if key in EXPECTED_METRICS:
                     try:
                         row[key] = float(row[key]) if row[key] else None
                     except:
@@ -33,6 +35,9 @@ def load_evaluation_results(csv_file):
                 elif key == 'pass':
                     row[key] = row[key].lower() == 'true'
             
+            for metric in EXPECTED_METRICS:
+                row.setdefault(metric, None)
+
             results.append(row)
     
     return results
@@ -53,16 +58,19 @@ def generate_report(results, output_file):
         
         passed = [r for r in results if r['pass']]
         f.write(f"通过候选数: {len(passed)}\n")
-        f.write(f"通过率: {len(passed)/len(results)*100:.1f}%\n\n")
+        if results:
+            f.write(f"通过率: {len(passed)/len(results)*100:.1f}%\n\n")
+        else:
+            f.write("通过率: N/A（没有可分析的候选）\n\n")
         
         # 指标统计
         f.write("指标统计:\n")
         f.write("-" * 70 + "\n")
         
-        metrics = ['ptm', 'plddt', 'chromophore_rmsd', 'sequence_identity']
+        metrics = EXPECTED_METRICS
         
         for metric in metrics:
-            values = [r[metric] for r in results if r[metric] is not None]
+            values = [r.get(metric) for r in results if r.get(metric) is not None]
             
             if values:
                 import numpy as np
