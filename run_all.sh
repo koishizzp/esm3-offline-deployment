@@ -13,6 +13,7 @@ echo ""
 AUTO_CONTINUE="${AUTO_CONTINUE:-0}"
 NUM_CANDIDATES="${NUM_CANDIDATES:-100}"
 BATCH_SIZE="${BATCH_SIZE:-10}"
+RUN_ID="${RUN_ID:-run_$(date +%Y%m%d_%H%M%S)}"
 
 if [[ "${1:-}" == "--full" ]]; then
   AUTO_CONTINUE="1"
@@ -60,15 +61,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "[5/7] 批量生成 ${NUM_CANDIDATES} 个候选..."
     echo "警告: 这可能需要几个小时!"
-    python 04_generate_batch.py --num-candidates "${NUM_CANDIDATES}" --batch-size "${BATCH_SIZE}"
+    echo "运行ID: ${RUN_ID}"
+    python 04_generate_batch.py --run-id "${RUN_ID}" --clean --num-candidates "${NUM_CANDIDATES}" --batch-size "${BATCH_SIZE}"
 
     echo ""
-    echo "[6/7] 评估所有候选..."
-    python 05_evaluate_candidates.py
+    echo "[6/7] 评估本次运行候选..."
+    python 05_evaluate_candidates.py --run-id "${RUN_ID}"
 
     echo ""
     echo "[7/7] 生成分析报告..."
-    python 06_analyze_results.py
+    python 06_analyze_results.py --run-id "${RUN_ID}"
 
     echo ""
     echo "======================================================================"
@@ -76,9 +78,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "======================================================================"
     echo ""
     echo "查看结果:"
-    echo "  - 分析报告: ../data/results/analysis_report.txt"
-    echo "  - Top候选: ../data/results/top_candidates.fasta"
-    echo "  - 详细数据: ../data/results/evaluation_results.csv"
+    echo "  - 分析报告: ../data/results/analysis_report_${RUN_ID}.txt"
+    echo "  - Top候选: ../data/results/top_candidates_${RUN_ID}.fasta"
+    echo "  - 详细数据: ../data/results/evaluation_results_${RUN_ID}.csv"
 else
     echo ""
     echo "======================================================================"
@@ -87,7 +89,7 @@ else
     echo ""
     echo "后续步骤:"
     echo "  cd scripts"
-    echo "  python 04_generate_batch.py --num-candidates 100"
-    echo "  python 05_evaluate_candidates.py"
-    echo "  python 06_analyze_results.py"
+    echo "  python 04_generate_batch.py --run-id ${RUN_ID} --clean --num-candidates 100"
+    echo "  python 05_evaluate_candidates.py --run-id ${RUN_ID}"
+    echo "  python 06_analyze_results.py --run-id ${RUN_ID}"
 fi
