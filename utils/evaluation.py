@@ -37,10 +37,25 @@ def _normalize_coords(value):
         return None
 
     if coords.ndim == 3:
-        # ESM常见格式: (L, atom, 3)，默认选CA(index=1)
-        if coords.shape[1] > 1:
-            return coords[:, 1, :]
-        return coords[:, 0, :]
+        # 兼容 (L, atom, 3) 与 (atom, L, 3)
+        # 优先识别原子维（通常<=37且明显小于序列长度）
+        if coords.shape[0] <= 40 and coords.shape[1] > 40:
+            atom_axis = 0
+        elif coords.shape[1] <= 40 and coords.shape[0] > 40:
+            atom_axis = 1
+        else:
+            # 回退到ESM常见布局
+            atom_axis = 1
+
+        ca_index = 1
+        if atom_axis == 1:
+            if coords.shape[1] > ca_index:
+                return coords[:, ca_index, :]
+            return coords[:, 0, :]
+
+        if coords.shape[0] > ca_index:
+            return coords[ca_index, :, :]
+        return coords[0, :, :]
 
     if coords.ndim == 2 and coords.shape[1] == 3:
         return coords
@@ -244,14 +259,14 @@ def generate_summary_stats(candidates_results):
     
     # 计算统计量
     for metric, values in metrics_values.items():
-        summary[f'{metric}_mean'] = np.mean(values)
-        summary[f'{metric}_std'] = np.std(values)
-        summary[f'{metric}_min'] = np.min(values)
-        summary[f'{metric}_max'] = np.max(values)
+        summary[f'{metric}_mean'] = float(np.mean(values))
+        summary[f'{metric}_std'] = float(np.std(values))
+        summary[f'{metric}_min'] = float(np.min(values))
+        summary[f'{metric}_max'] = float(np.max(values))
     
     # 序列多样性
     sequences = [r['sequence'] for r in candidates_results]
-    summary['sequence_diversity'] = 1.0 - calculate_diversity(sequences)
+    summary['sequence_diversity'] = float(1.0 - calculate_diversity(sequences))
     
     return summary
 
