@@ -30,39 +30,6 @@ def _to_numpy(value):
     return np.asarray(value)
 
 
-def _normalize_coords(value):
-    """将坐标标准化为(N, 3)，优先使用CA原子坐标。"""
-    coords = _to_numpy(value)
-    if coords is None:
-        return None
-
-    if coords.ndim == 3:
-        # 兼容 (L, atom, 3) 与 (atom, L, 3)
-        # 优先识别原子维（通常<=37且明显小于序列长度）
-        if coords.shape[0] <= 40 and coords.shape[1] > 40:
-            atom_axis = 0
-        elif coords.shape[1] <= 40 and coords.shape[0] > 40:
-            atom_axis = 1
-        else:
-            # 回退到ESM常见布局
-            atom_axis = 1
-
-        ca_index = 1
-        if atom_axis == 1:
-            if coords.shape[1] > ca_index:
-                return coords[:, ca_index, :]
-            return coords[:, 0, :]
-
-        if coords.shape[0] > ca_index:
-            return coords[ca_index, :, :]
-        return coords[0, :, :]
-
-    if coords.ndim == 2 and coords.shape[1] == 3:
-        return coords
-
-    raise ValueError(f"不支持的坐标形状: {coords.shape}")
-
-
 def evaluate_candidate(
     generated_protein,
     template_data,
@@ -120,8 +87,8 @@ def evaluate_candidate(
     chromophore_rmsd = None
     if hasattr(generated_protein, 'coordinates') and generated_protein.coordinates is not None:
         try:
-            gen_coords = _normalize_coords(generated_protein.coordinates)
-            template_coords = _normalize_coords(template_data['coordinates'])
+            gen_coords = _to_numpy(generated_protein.coordinates)
+            template_coords = _to_numpy(template_data['coordinates'])
             
             chromophore_rmsd = calculate_rmsd(
                 gen_coords,

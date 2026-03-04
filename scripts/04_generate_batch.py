@@ -83,10 +83,8 @@ def main():
 
     # 生成
     num_batches = (args.num_candidates + args.batch_size - 1) // args.batch_size
-
+    
     success_count = 0
-    failure_count = 0
-    generated_files = []
     start_time = time.time()
 
     for batch_idx in range(num_batches):
@@ -121,20 +119,19 @@ def main():
                 output_file = os.path.join(CANDIDATES_DIR, filename)
                 header = f">{run_id}|batch_{batch_idx}_candidate_{i}|temp_{temp:.2f}"
                 save_to_fasta(generated.sequence, output_file, header=header)
-
-                generated_files.append(filename)
+                
                 success_count += 1
                 print(f"    ✓ 完成 (长度={len(generated.sequence)})")
 
                 # 及时释放对象，避免长任务中显存累积
                 del generated
                 generator.clear_cuda_cache()
-
+                
             except Exception as e:
                 failure_count += 1
                 print(f"    ✗ 失败: {e}")
                 generator.clear_cuda_cache()
-
+    
     elapsed_time = time.time() - start_time
 
     manifest = {
@@ -156,15 +153,12 @@ def main():
     print(f"运行ID: {run_id}")
     print(f"总耗时: {elapsed_time/60:.1f} 分钟")
     print(f"成功生成: {success_count}/{args.num_candidates}")
-    print(f"失败生成: {failure_count}")
 
     if success_count > 0:
         print(f"平均耗时: {elapsed_time/success_count:.1f} 秒/候选")
     else:
         print("平均耗时: N/A（没有成功生成的候选）")
-
-    print(f"\nManifest已保存: {manifest_file}")
-    print(f"下一步: 运行 05_evaluate_candidates.py --run-id {run_id}")
+    print(f"\n下一步: 运行 05_evaluate_candidates.py")
 
 
 if __name__ == "__main__":

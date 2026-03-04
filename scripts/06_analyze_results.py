@@ -13,23 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
 
+
 EXPECTED_METRICS = ['ptm', 'plddt', 'chromophore_rmsd', 'sequence_identity']
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='分析评估结果')
-    parser.add_argument('--run-id', type=str, help='指定run-id（读取 evaluation_results_<run-id>.csv）')
-    parser.add_argument('--results-file', type=str, help='显式指定评估CSV文件路径')
-    parser.add_argument('--top-n', type=int, default=10, help='导出Top候选数量')
-    return parser.parse_args()
-
-
-def resolve_results_file(args):
-    if args.results_file:
-        return args.results_file if os.path.isabs(args.results_file) else os.path.join(RESULTS_DIR, args.results_file)
-    if args.run_id:
-        return os.path.join(RESULTS_DIR, f"evaluation_results_{args.run_id}.csv")
-    return os.path.join(RESULTS_DIR, "evaluation_results.csv")
 
 
 def load_evaluation_results(csv_file):
@@ -49,7 +34,7 @@ def load_evaluation_results(csv_file):
                     row[key] = int(row[key])
                 elif key == 'pass':
                     row[key] = row[key].lower() == 'true'
-
+            
             for metric in EXPECTED_METRICS:
                 row.setdefault(metric, None)
 
@@ -76,13 +61,16 @@ def generate_report(results, output_file, top_n=10):
             f.write(f"通过率: {len(passed)/len(results)*100:.1f}%\n\n")
         else:
             f.write("通过率: N/A（没有可分析的候选）\n\n")
-
+        
+        # 指标统计
         f.write("指标统计:\n")
         f.write("-" * 70 + "\n")
-
-        for metric in EXPECTED_METRICS:
+        
+        metrics = EXPECTED_METRICS
+        
+        for metric in metrics:
             values = [r.get(metric) for r in results if r.get(metric) is not None]
-
+            
             if values:
                 import numpy as np
                 f.write(f"\n{metric.upper()}:\n")

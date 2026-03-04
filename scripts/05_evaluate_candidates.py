@@ -44,10 +44,10 @@ def main():
     print("=" * 60)
     print("脚本05: 评估候选序列")
     print("=" * 60)
-
-    # 查找候选文件
-    fasta_files = _collect_candidate_files(run_id=args.run_id, pattern=args.pattern)
-
+    
+    # 查找所有候选文件
+    fasta_files = sorted(glob.glob(os.path.join(CANDIDATES_DIR, "*.fasta")))
+    
     if not fasta_files:
         print(f"\n✗ 错误: 在 {CANDIDATES_DIR} 中没有找到匹配的候选文件")
         print(f"  run_id={args.run_id}, pattern={args.pattern}")
@@ -72,7 +72,7 @@ def main():
     # 评估所有候选
     all_results = []
     failed_evaluations = 0
-
+    
     for i, fasta_file in enumerate(fasta_files):
         print(f"\n[{i+1}/{len(fasta_files)}] 评估: {os.path.basename(fasta_file)}")
 
@@ -118,15 +118,9 @@ def main():
                 failed_evaluations += 1
                 print(f"  ✗ 评估失败: {e}")
                 generator.clear_cuda_cache()
-
-    # 输出文件名
-    if args.output:
-        output_file = args.output if os.path.isabs(args.output) else os.path.join(RESULTS_DIR, args.output)
-    elif args.run_id:
-        output_file = os.path.join(RESULTS_DIR, f"evaluation_results_{args.run_id}.csv")
-    else:
-        output_file = os.path.join(RESULTS_DIR, "evaluation_results.csv")
-
+    
+    # 保存结果
+    output_file = os.path.join(RESULTS_DIR, "evaluation_results.csv")
     save_evaluation_results(all_results, output_file)
 
     summary = generate_summary_stats(all_results)
@@ -143,7 +137,7 @@ def main():
         print(f"通过率: {pass_rate:.1f}%")
     else:
         print("通过率: N/A（没有成功完成评估的候选）")
-
+    
     for key, value in summary.items():
         if key.endswith('_mean'):
             metric = key.replace('_mean', '')
