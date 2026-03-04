@@ -7,6 +7,29 @@ import numpy as np
 from .structure_utils import calculate_rmsd, sequence_identity
 
 
+def _to_float(value):
+    """将numpy/torch标量安全转换为Python float。"""
+    if value is None:
+        return None
+    if hasattr(value, "detach"):
+        value = value.detach().cpu()
+    if hasattr(value, "item"):
+        try:
+            return float(value.item())
+        except Exception:
+            pass
+    return float(value)
+
+
+def _to_numpy(value):
+    """将torch/numpy数据统一转换为numpy数组。"""
+    if value is None:
+        return None
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value)
+
+
 def evaluate_candidate(
     generated_protein,
     template_data,
@@ -43,13 +66,14 @@ def evaluate_candidate(
     
     # 2. 结构质量指标（如果可用）
     if hasattr(generated_protein, 'ptm'):
-        ptm = generated_protein.ptm
+        ptm = _to_float(generated_protein.ptm)
         results['metrics']['ptm'] = ptm
     else:
         ptm = None
     
     if hasattr(generated_protein, 'plddt'):
-        plddt = np.mean(generated_protein.plddt)
+        plddt_array = _to_numpy(generated_protein.plddt)
+        plddt = float(np.mean(plddt_array)) if plddt_array is not None else None
         results['metrics']['plddt'] = plddt
     else:
         plddt = None
@@ -58,8 +82,8 @@ def evaluate_candidate(
     chromophore_rmsd = None
     if hasattr(generated_protein, 'coordinates') and generated_protein.coordinates is not None:
         try:
-            gen_coords = generated_protein.coordinates
-            template_coords = template_data['coordinates']
+            gen_coords = _to_numpy(generated_protein.coordinates)
+            template_coords = _to_numpy(template_data['coordinates'])
             
             chromophore_rmsd = calculate_rmsd(
                 gen_coords,

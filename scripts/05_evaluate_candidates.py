@@ -29,7 +29,7 @@ def main():
     print("=" * 60)
     
     # 查找所有候选文件
-    fasta_files = glob.glob(os.path.join(CANDIDATES_DIR, "*.fasta"))
+    fasta_files = sorted(glob.glob(os.path.join(CANDIDATES_DIR, "*.fasta")))
     
     if not fasta_files:
         print(f"\n✗ 错误: 在 {CANDIDATES_DIR} 中没有找到候选文件")
@@ -51,6 +51,7 @@ def main():
     
     # 评估所有候选
     all_results = []
+    failed_evaluations = 0
     
     for i, fasta_file in enumerate(fasta_files):
         print(f"\n[{i+1}/{len(fasta_files)}] 评估: {os.path.basename(fasta_file)}")
@@ -101,7 +102,9 @@ def main():
                 print(f"  {status} {metrics_str}")
                 
             except Exception as e:
+                failed_evaluations += 1
                 print(f"  ✗ 评估失败: {e}")
+                generator.clear_cuda_cache()
     
     # 保存结果
     output_file = os.path.join(RESULTS_DIR, "evaluation_results.csv")
@@ -115,7 +118,13 @@ def main():
     print("=" * 60)
     print(f"总候选数: {summary['total_candidates']}")
     print(f"通过候选数: {summary['passed_candidates']}")
-    print(f"通过率: {summary['passed_candidates']/summary['total_candidates']*100:.1f}%")
+    print(f"失败评估数: {failed_evaluations}")
+
+    if summary['total_candidates'] > 0:
+        pass_rate = summary['passed_candidates'] / summary['total_candidates'] * 100
+        print(f"通过率: {pass_rate:.1f}%")
+    else:
+        print("通过率: N/A（没有成功完成评估的候选）")
     
     for key, value in summary.items():
         if key.endswith('_mean'):
