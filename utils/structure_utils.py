@@ -126,13 +126,24 @@ def load_pdb(pdb_file):
         from biotite.structure import get_residues
 
         residue_ids = get_residues(structure)[0]
-        three_letter = [
-            structure[structure.res_id == res_id].res_name[0]
-            for res_id in residue_ids
-        ]
-        sequence = ''.join(ProteinSequence.convert_letter_3to1(res) for res in three_letter)
-        
-        ca_atoms = structure[structure.atom_name == 'CA']
+        valid_res_ids = []
+        sequence_letters = []
+
+        for res_id in residue_ids:
+            res_name = structure[structure.res_id == res_id].res_name[0]
+            try:
+                aa = ProteinSequence.convert_letter_3to1(res_name)
+            except KeyError:
+                # 跳过水分子/配体等非标准氨基酸残基（如 HOH）
+                continue
+
+            valid_res_ids.append(res_id)
+            sequence_letters.append(aa)
+
+        sequence = ''.join(sequence_letters)
+
+        # 只保留有效残基中的CA坐标，确保序列与坐标长度一致
+        ca_atoms = structure[(structure.atom_name == 'CA') & np.isin(structure.res_id, valid_res_ids)]
         coords = ca_atoms.coord
         
         return {
@@ -143,6 +154,24 @@ def load_pdb(pdb_file):
     except Exception as e:
         print(f"加载PDB失败: {e}")
         raise
+
+
+def save_to_fasta(sequence, output_file, header=">sequence", line_width=80):
+    """保存序列到FASTA文件"""
+    output_file = Path(output_file)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    header = str(header).strip()
+    if not header.startswith('>'):
+        header = f'>{header}'
+
+    sequence = str(sequence).replace('\n', '').replace('\r', '').strip()
+
+    with open(output_file, 'w') as f:
+        f.write(f"{header}\n")
+        for i in range(0, len(sequence), line_width):
+            f.write(f"{sequence[i:i+line_width]}\n")
+
 
 
 def load_from_fasta(fasta_file):
