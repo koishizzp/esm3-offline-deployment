@@ -123,9 +123,9 @@ def load_pdb(pdb_file):
         structure = structure[structure.chain_id == chain_id]
         
         from biotite.sequence import ProteinSequence
-        from biotite.structure import residues
+        from biotite.structure import get_residues
 
-        residue_ids = residues(structure)[0]
+        residue_ids = get_residues(structure)[0]
         three_letter = [
             structure[structure.res_id == res_id].res_name[0]
             for res_id in residue_ids
