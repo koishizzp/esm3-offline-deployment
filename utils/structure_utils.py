@@ -156,6 +156,24 @@ def load_pdb(pdb_file):
         raise
 
 
+def save_to_fasta(sequence, output_file, header=">sequence", line_width=80):
+    """保存序列到FASTA文件"""
+    output_file = Path(output_file)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    header = str(header).strip()
+    if not header.startswith('>'):
+        header = f'>{header}'
+
+    sequence = str(sequence).replace('\n', '').replace('\r', '').strip()
+
+    with open(output_file, 'w') as f:
+        f.write(f"{header}\n")
+        for i in range(0, len(sequence), line_width):
+            f.write(f"{sequence[i:i+line_width]}\n")
+
+
+
 def load_from_fasta(fasta_file):
     """从FASTA文件加载序列
     
