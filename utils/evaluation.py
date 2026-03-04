@@ -7,6 +7,62 @@ import numpy as np
 from .structure_utils import calculate_rmsd, sequence_identity
 
 
+def _to_float(value):
+    """将numpy/torch标量安全转换为Python float。"""
+    if value is None:
+        return None
+    if hasattr(value, "detach"):
+        value = value.detach().cpu()
+    if hasattr(value, "item"):
+        try:
+            return float(value.item())
+        except Exception:
+            pass
+    return float(value)
+
+
+def _to_numpy(value):
+    """将torch/numpy数据统一转换为numpy数组。"""
+    if value is None:
+        return None
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value)
+
+
+def _normalize_coords(value):
+    """将坐标标准化为(N, 3)，优先使用CA原子坐标。"""
+    coords = _to_numpy(value)
+    if coords is None:
+        return None
+
+    if coords.ndim == 3:
+        # 兼容 (L, atom, 3) 与 (atom, L, 3)
+        # 优先识别原子维（通常<=37且明显小于序列长度）
+        if coords.shape[0] <= 40 and coords.shape[1] > 40:
+            atom_axis = 0
+        elif coords.shape[1] <= 40 and coords.shape[0] > 40:
+            atom_axis = 1
+        else:
+            # 回退到ESM常见布局
+            atom_axis = 1
+
+        ca_index = 1
+        if atom_axis == 1:
+            if coords.shape[1] > ca_index:
+                return coords[:, ca_index, :]
+            return coords[:, 0, :]
+
+        if coords.shape[0] > ca_index:
+            return coords[ca_index, :, :]
+        return coords[0, :, :]
+
+    if coords.ndim == 2 and coords.shape[1] == 3:
+        return coords
+
+    raise ValueError(f"不支持的坐标形状: {coords.shape}")
+
+
 def evaluate_candidate(
     generated_protein,
     template_data,
@@ -33,7 +89,12 @@ def evaluate_candidate(
         'sequence': generated_protein.sequence,
         'length': len(generated_protein.sequence),
         'pass': False,
-        'metrics': {}
+        'metrics': {
+            'sequence_identity': None,
+            'ptm': None,
+            'plddt': None,
+            'chromophore_rmsd': None,
+        }
     }
     
     # 1. 序列相同性
@@ -43,13 +104,14 @@ def evaluate_candidate(
     
     # 2. 结构质量指标（如果可用）
     if hasattr(generated_protein, 'ptm'):
-        ptm = generated_protein.ptm
+        ptm = _to_float(generated_protein.ptm)
         results['metrics']['ptm'] = ptm
     else:
         ptm = None
     
     if hasattr(generated_protein, 'plddt'):
-        plddt = np.mean(generated_protein.plddt)
+        plddt_array = _to_numpy(generated_protein.plddt)
+        plddt = float(np.mean(plddt_array)) if plddt_array is not None else None
         results['metrics']['plddt'] = plddt
     else:
         plddt = None
@@ -58,8 +120,8 @@ def evaluate_candidate(
     chromophore_rmsd = None
     if hasattr(generated_protein, 'coordinates') and generated_protein.coordinates is not None:
         try:
-            gen_coords = generated_protein.coordinates
-            template_coords = template_data['coordinates']
+            gen_coords = _normalize_coords(generated_protein.coordinates)
+            template_coords = _normalize_coords(template_data['coordinates'])
             
             chromophore_rmsd = calculate_rmsd(
                 gen_coords,
@@ -197,14 +259,14 @@ def generate_summary_stats(candidates_results):
     
     # 计算统计量
     for metric, values in metrics_values.items():
-        summary[f'{metric}_mean'] = np.mean(values)
-        summary[f'{metric}_std'] = np.std(values)
-        summary[f'{metric}_min'] = np.min(values)
-        summary[f'{metric}_max'] = np.max(values)
+        summary[f'{metric}_mean'] = float(np.mean(values))
+        summary[f'{metric}_std'] = float(np.std(values))
+        summary[f'{metric}_min'] = float(np.min(values))
+        summary[f'{metric}_max'] = float(np.max(values))
     
     # 序列多样性
     sequences = [r['sequence'] for r in candidates_results]
-    summary['sequence_diversity'] = 1.0 - calculate_diversity(sequences)
+    summary['sequence_diversity'] = float(1.0 - calculate_diversity(sequences))
     
     return summary
 
