@@ -6,11 +6,13 @@ import os
 import sys
 from pathlib import Path
 
-import torch
-
 # 离线模式
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+# 减少CUDA内存碎片，缓解长时间批量生成的OOM
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+import torch
 
 # 添加项目路径
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -85,6 +87,12 @@ class ESM3Generator:
 
             print("✓ 模型加载完成")
 
+    def clear_cuda_cache(self):
+        """主动清理CUDA缓存，降低长批次任务OOM概率。"""
+        if self.device.type == "cuda":
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+
     def create_protein(self, sequence=None, coordinates=None):
         from esm.sdk.api import ESMProtein
 
@@ -97,7 +105,8 @@ class ESM3Generator:
         config = GenerationConfig(track="structure", num_steps=num_steps, temperature=temperature)
 
         print(f"生成结构... (steps={num_steps}, temp={temperature})")
-        result = self.model.generate(prompt, config)
+        with torch.inference_mode():
+            result = self.model.generate(prompt, config)
         print("✓ 结构生成完成")
         return result
 
@@ -108,7 +117,8 @@ class ESM3Generator:
         config = GenerationConfig(track="sequence", num_steps=num_steps, temperature=temperature)
 
         print(f"生成序列... (steps={num_steps}, temp={temperature})")
-        result = self.model.generate(prompt, config)
+        with torch.inference_mode():
+            result = self.model.generate(prompt, config)
         print("✓ 序列生成完成")
         return result
 
@@ -122,7 +132,8 @@ class ESM3Generator:
         config = GenerationConfig(track="structure", schedule="cosine", num_steps=num_steps, temperature=0.0)
 
         try:
-            return self.model.generate(protein, config)
+            with torch.inference_mode():
+                return self.model.generate(protein, config)
         except Exception as e:
             print(f"    结构预测失败: {e}")
             return protein
