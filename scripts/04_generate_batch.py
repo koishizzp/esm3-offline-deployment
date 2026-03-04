@@ -53,7 +53,7 @@ def main():
     # 生成
     num_batches = (args.num_candidates + args.batch_size - 1) // args.batch_size
     
-    all_generated = []
+    success_count = 0
     start_time = time.time()
     
     for batch_idx in range(num_batches):
@@ -88,11 +88,16 @@ def main():
                 header = f">batch_{batch_idx}_candidate_{i}|temp_{temp:.2f}"
                 save_to_fasta(generated.sequence, output_file, header=header)
                 
-                all_generated.append(generated)
+                success_count += 1
                 print(f"    ✓ 完成 (长度={len(generated.sequence)})")
+
+                # 及时释放对象，避免长任务中显存累积
+                del generated
+                generator.clear_cuda_cache()
                 
             except Exception as e:
                 print(f"    ✗ 失败: {e}")
+                generator.clear_cuda_cache()
     
     elapsed_time = time.time() - start_time
     
@@ -100,8 +105,12 @@ def main():
     print("生成完成!")
     print("=" * 60)
     print(f"总耗时: {elapsed_time/60:.1f} 分钟")
-    print(f"成功生成: {len(all_generated)}/{args.num_candidates}")
-    print(f"平均耗时: {elapsed_time/len(all_generated):.1f} 秒/候选")
+    print(f"成功生成: {success_count}/{args.num_candidates}")
+
+    if success_count > 0:
+        print(f"平均耗时: {elapsed_time/success_count:.1f} 秒/候选")
+    else:
+        print("平均耗时: N/A（没有成功生成的候选）")
     print(f"\n下一步: 运行 05_evaluate_candidates.py")
 
 
