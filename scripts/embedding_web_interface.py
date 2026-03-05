@@ -68,7 +68,7 @@ def extract_embeddings(
             summary = analyze_results(output_dir)
             status = f"✅ 完成！\n\n{summary}"
             
-            output_files = list(Path(output_dir).glob("*.pkl.gz"))
+            output_files = list((Path(output_dir) / "embeddings").glob("*.pkl.gz"))
             if len(output_files) <= 10:
                 file_list = "\n".join([f.name for f in output_files[:10]])
                 return status, output_text, file_list
@@ -90,8 +90,9 @@ def analyze_results(output_dir):
     if not output_path.exists():
         return "输出目录不存在"
     
-    pkl_files = list(output_path.glob("*.pkl.gz"))
-    npy_files = list(output_path.glob("*.npy"))
+    emb_dir = output_path / "embeddings"
+    pkl_files = list(emb_dir.glob("*.pkl.gz")) if emb_dir.exists() else []
+    npy_files = list(emb_dir.glob("*.npy")) if emb_dir.exists() else []
     
     summary = f"成功生成: {len(pkl_files) + len(npy_files)} 个嵌入文件\n"
     summary += f"  - PKL格式: {len(pkl_files)} 个\n"
