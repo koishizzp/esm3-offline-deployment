@@ -45,6 +45,17 @@ python scripts/05_evaluate_candidates.py
 python scripts/06_analyze_results.py
 ```
 
+批量生成优化示例（温度分层 + 高质量步数 + 前置硬约束预筛）：
+
+```bash
+python scripts/04_generate_batch.py \
+  --num-candidates 200 \
+  --batch-size 10 \
+  --stratified-temp --temp-strata 0.55,0.65,0.75,0.85 \
+  --quality-mode high \
+  --max-attempts-per-candidate 3
+```
+
 ## 3. 输出结果
 
 生成结果位于 `data/results/`：
