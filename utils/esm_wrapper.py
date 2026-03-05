@@ -127,16 +127,21 @@ class ESM3Generator:
         from esm.sdk.api import GenerationConfig
 
         protein = self.create_protein(sequence=sequence)
+        base_steps = max(len(sequence) // 16, 10)
 
-        num_steps = max(len(sequence) // 16, 10)
-        config = GenerationConfig(track="structure", schedule="cosine", num_steps=num_steps, temperature=0.0)
+        retry_steps = [base_steps, max(base_steps // 2, 8), 8]
+        last_error = None
+        for attempt, num_steps in enumerate(retry_steps, start=1):
+            config = GenerationConfig(track="structure", schedule="cosine", num_steps=num_steps, temperature=0.0)
+            try:
+                with torch.inference_mode():
+                    return self.model.generate(protein, config)
+            except Exception as e:
+                last_error = e
+                print(f"    结构预测失败 (attempt {attempt}/{len(retry_steps)}, steps={num_steps}): {e}")
+                self.clear_cuda_cache()
 
-        try:
-            with torch.inference_mode():
-                return self.model.generate(protein, config)
-        except Exception as e:
-            print(f"    结构预测失败: {e}")
-            return protein
+        raise RuntimeError(f"结构预测在{len(retry_steps)}次尝试后仍失败: {last_error}")
 
     def chain_of_thought_generation(self, prompt, structure_steps=200, sequence_steps=150, temperature=0.7):
         print("=" * 50)
