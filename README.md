@@ -77,7 +77,28 @@ python scripts/06_analyze_results.py
 示例：
 
 ```bash
-python scripts/get_embeddings_offline.py data.faa -o embeddings_data   --half --format both --pooling mean --l2-normalize
+python scripts/get_embeddings_offline.py data.faa -o embeddings_data --half --format both --pooling mean --l2-normalize
+```
+
+### 输入文件是从哪里读取？
+
+`get_embeddings_offline.py` 的第一个位置参数 `input` 就是 **FASTA 文件路径**，脚本按你传入的路径直接读取：
+
+- 传相对路径：相对于你执行命令时的当前目录。
+- 传绝对路径：按绝对路径读取。
+
+常见用法：
+
+```bash
+# 在仓库根目录运行（推荐）
+python scripts/get_embeddings_offline.py data/my_sequences.faa -o data/my_embeddings
+
+# 如果先 cd 到 scripts 目录，需要改相对路径
+cd scripts
+python get_embeddings_offline.py ../data/my_sequences.faa -o ../data/my_embeddings
+
+# 也可以直接用绝对路径
+python scripts/get_embeddings_offline.py /workspace/esm3-offline-deployment/data/my_sequences.faa -o /workspace/esm3-offline-deployment/data/my_embeddings
 ```
 
 输出目录结构：
