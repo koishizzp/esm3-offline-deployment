@@ -4,8 +4,12 @@
 """
 
 import numpy as np
-import torch
 from pathlib import Path
+
+try:
+    import torch
+except ModuleNotFoundError:
+    torch = None
 
 
 def calculate_rmsd(coords1, coords2, indices=None):
@@ -21,12 +25,12 @@ def calculate_rmsd(coords1, coords2, indices=None):
         RMSD值（Å）
     """
     # 统一转换为numpy array（处理torch tensor）
-    if torch.is_tensor(coords1):
+    if torch is not None and torch.is_tensor(coords1):
         coords1 = coords1.detach().cpu().numpy()
     else:
         coords1 = np.array(coords1)
     
-    if torch.is_tensor(coords2):
+    if torch is not None and torch.is_tensor(coords2):
         coords2 = coords2.detach().cpu().numpy()
     else:
         coords2 = np.array(coords2)
@@ -47,12 +51,12 @@ def calculate_rmsd(coords1, coords2, indices=None):
 
 def align_structures(coords1, coords2):
     """使用Kabsch算法对齐两个结构"""
-    if torch.is_tensor(coords1):
+    if torch is not None and torch.is_tensor(coords1):
         coords1 = coords1.detach().cpu().numpy()
     else:
         coords1 = np.array(coords1)
     
-    if torch.is_tensor(coords2):
+    if torch is not None and torch.is_tensor(coords2):
         coords2 = coords2.detach().cpu().numpy()
     else:
         coords2 = np.array(coords2)
@@ -94,7 +98,7 @@ def extract_backbone_coords(protein, atom_name='CA'):
     
     coords = protein.coordinates
     
-    if torch.is_tensor(coords):
+    if torch is not None and torch.is_tensor(coords):
         coords = coords.detach().cpu().numpy()
     else:
         coords = np.array(coords)

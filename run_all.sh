@@ -11,7 +11,7 @@ echo ""
 
 # 参数
 AUTO_CONTINUE="${AUTO_CONTINUE:-0}"
-NUM_CANDIDATES="${NUM_CANDIDATES:-100}"
+NUM_CANDIDATES="${NUM_CANDIDATES:-30}"
 BATCH_SIZE="${BATCH_SIZE:-10}"
 RUN_ID="${RUN_ID:-run_$(date +%Y%m%d_%H%M%S)}"
 
@@ -89,7 +89,7 @@ else
     echo ""
     echo "后续步骤:"
     echo "  cd scripts"
-    echo "  python 04_generate_batch.py --run-id ${RUN_ID} --clean --num-candidates 100"
+    echo "  python 04_generate_batch.py --run-id ${RUN_ID} --clean --num-candidates 30"
     echo "  python 05_evaluate_candidates.py --run-id ${RUN_ID}"
     echo "  python 06_analyze_results.py --run-id ${RUN_ID}"
 fi

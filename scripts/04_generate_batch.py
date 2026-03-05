@@ -15,7 +15,6 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
-from utils.esm_wrapper import ESM3Generator
 from utils.structure_utils import save_to_fasta
 
 
@@ -79,12 +78,23 @@ def main():
         prompt_data = pickle.load(f)
 
     # 初始化生成器
+    try:
+        from utils.esm_wrapper import ESM3Generator
+    except ModuleNotFoundError as e:
+        if e.name == "torch":
+            print("\n✗ 错误: 未找到 PyTorch (torch) 依赖。")
+            print("请先在当前环境安装 torch，或激活包含 torch 的 conda 环境。")
+            sys.exit(1)
+        raise
+
     generator = ESM3Generator(MODEL_DIR, MODEL_NAME)
 
     # 生成
     num_batches = (args.num_candidates + args.batch_size - 1) // args.batch_size
     
     success_count = 0
+    failure_count = 0
+    generated_files = []
     start_time = time.time()
 
     for batch_idx in range(num_batches):
@@ -121,6 +131,7 @@ def main():
                 save_to_fasta(generated.sequence, output_file, header=header)
                 
                 success_count += 1
+                generated_files.append(filename)
                 print(f"    ✓ 完成 (长度={len(generated.sequence)})")
 
                 # 及时释放对象，避免长任务中显存累积
