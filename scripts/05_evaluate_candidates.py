@@ -13,7 +13,6 @@ import argparse
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import *
-from utils.esm_wrapper import ESM3Generator
 from utils.structure_utils import load_from_fasta
 from utils.evaluation import (
     evaluate_candidate,
@@ -45,8 +44,8 @@ def main():
     print("脚本05: 评估候选序列")
     print("=" * 60)
     
-    # 查找所有候选文件
-    fasta_files = sorted(glob.glob(os.path.join(CANDIDATES_DIR, "*.fasta")))
+    # 查找候选文件（可按 run_id / pattern 过滤）
+    fasta_files = _collect_candidate_files(run_id=args.run_id, pattern=args.pattern)
     
     if not fasta_files:
         print(f"\n✗ 错误: 在 {CANDIDATES_DIR} 中没有找到匹配的候选文件")
@@ -67,6 +66,17 @@ def main():
 
     # 初始化生成器（用于结构预测）
     print("\n初始化ESM3...")
+    try:
+        from utils.esm_wrapper import ESM3Generator
+    except ModuleNotFoundError as e:
+        if e.name == "torch":
+            print("\n✗ 错误: 未找到 PyTorch (torch) 依赖。")
+            print("请先在当前环境安装 torch，例如：")
+            print("  pip install torch")
+            print("或激活包含 torch 的 conda 环境后重试。")
+            sys.exit(1)
+        raise
+
     generator = ESM3Generator(MODEL_DIR, MODEL_NAME)
 
     # 评估所有候选
@@ -120,7 +130,12 @@ def main():
                 generator.clear_cuda_cache()
     
     # 保存结果
-    output_file = os.path.join(RESULTS_DIR, "evaluation_results.csv")
+    if args.output:
+        output_file = args.output if os.path.isabs(args.output) else os.path.join(RESULTS_DIR, args.output)
+    elif args.run_id:
+        output_file = os.path.join(RESULTS_DIR, f"evaluation_results_{args.run_id}.csv")
+    else:
+        output_file = os.path.join(RESULTS_DIR, "evaluation_results.csv")
     save_evaluation_results(all_results, output_file)
 
     summary = generate_summary_stats(all_results)
