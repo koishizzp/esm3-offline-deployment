@@ -89,6 +89,13 @@ def evaluate_candidate(
         try:
             gen_coords = _to_numpy(generated_protein.coordinates)
             template_coords = _to_numpy(template_data['coordinates'])
+
+            # 统一坐标形状到 (L, 3)：优先使用 CA 原子
+            if gen_coords is not None and gen_coords.ndim == 3:
+                # ESM3 常见维度: (L, 37, 3)
+                gen_coords = gen_coords[:, 1, :]
+            if template_coords is not None and template_coords.ndim == 3:
+                template_coords = template_coords[:, 1, :]
             
             chromophore_rmsd = calculate_rmsd(
                 gen_coords,

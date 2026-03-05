@@ -17,6 +17,28 @@ from config import *
 EXPECTED_METRICS = ['ptm', 'plddt', 'chromophore_rmsd', 'sequence_identity']
 
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='分析评估结果并输出报告')
+    parser.add_argument('--run-id', type=str, help='指定运行ID（优先读取 evaluation_results_<run_id>.csv）')
+    parser.add_argument('--input', type=str, help='手动指定评估结果CSV路径')
+    parser.add_argument('--top-n', type=int, default=10, help='输出Top候选数量（默认: 10）')
+    return parser.parse_args()
+
+
+def resolve_results_file(args):
+    if args.input:
+        return args.input
+
+    if args.run_id:
+        candidate = os.path.join(RESULTS_DIR, f'evaluation_results_{args.run_id}.csv')
+        if os.path.exists(candidate):
+            return candidate
+
+    return os.path.join(RESULTS_DIR, 'evaluation_results.csv')
+
+
+
 def load_evaluation_results(csv_file):
     """加载评估结果"""
     results = []
