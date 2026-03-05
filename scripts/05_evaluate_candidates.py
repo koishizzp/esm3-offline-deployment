@@ -9,6 +9,7 @@ import sys
 import glob
 import pickle
 import argparse
+from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -82,6 +83,7 @@ def main():
     # 评估所有候选
     all_results = []
     failed_evaluations = 0
+    rejection_reason_counter = Counter()
     
     for i, fasta_file in enumerate(fasta_files):
         print(f"\n[{i+1}/{len(fasta_files)}] 评估: {os.path.basename(fasta_file)}")
@@ -109,12 +111,14 @@ def main():
                     CHROMOPHORE_POSITIONS,
                     min_ptm=MIN_PTM,
                     min_plddt=MIN_PLDDT,
-                    max_chromophore_rmsd=MAX_CHROMOPHORE_RMSD
+                    max_chromophore_rmsd=MAX_CHROMOPHORE_RMSD,
+                    fixed_residues=KEY_RESIDUES
                 )
 
                 result['file'] = os.path.basename(fasta_file)
                 result['header'] = header
                 all_results.append(result)
+                rejection_reason_counter.update(result.get('rejection_reasons', []))
 
                 status = "✓" if result['pass'] else "✗"
                 metrics_str = ", ".join([
@@ -146,6 +150,11 @@ def main():
     print(f"总候选数: {summary['total_candidates']}")
     print(f"通过候选数: {summary['passed_candidates']}")
     print(f"失败评估数: {failed_evaluations}")
+
+    if rejection_reason_counter:
+        print("主要拒绝原因 (Top 10):")
+        for reason, count in rejection_reason_counter.most_common(10):
+            print(f"  - {reason}: {count}")
 
     if summary['total_candidates'] > 0:
         pass_rate = summary['passed_candidates'] / summary['total_candidates'] * 100
